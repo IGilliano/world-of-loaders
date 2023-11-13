@@ -31,10 +31,9 @@ func NewAuthService(rep repository.Authorization) *AuthService {
 	return &AuthService{rep: rep}
 }
 
-func (s *AuthService) CreatePlayer(player repo_models.Player) (int, error) {
+func (a *AuthService) CreatePlayer(player repo_models.Player) (int, error) {
 	player.Password = generatePasswordHash(player.Password)
-
-	return s.rep.CreatePlayer(player)
+	return a.rep.CreatePlayer(player)
 }
 
 func generatePasswordHash(password string) string {
@@ -44,12 +43,12 @@ func generatePasswordHash(password string) string {
 	return fmt.Sprintf("%x", hash.Sum([]byte(salt)))
 }
 
-func (s *AuthService) GetPlayers() ([]*repo_models.Player, error) {
-	return s.rep.GetPlayers()
+func (a *AuthService) GetPlayers() ([]*repo_models.Player, error) {
+	return a.rep.GetPlayers()
 }
 
-func (s *AuthService) GenerateToken(login, password string) (string, error) {
-	player, err := s.rep.GetPlayer(login, generatePasswordHash(password))
+func (a *AuthService) GenerateToken(login, password string) (string, error) {
+	player, err := a.rep.GetPlayer(login, generatePasswordHash(password))
 	if err != nil {
 		fmt.Println("Error! Incorrect login or password")
 		return "", err
@@ -68,7 +67,7 @@ func (s *AuthService) GenerateToken(login, password string) (string, error) {
 	return token.SignedString([]byte(signingKey))
 }
 
-func (s *AuthService) ParseToken(tokenString string) (int, string, error) {
+func (a *AuthService) ParseToken(tokenString string) (int, string, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &tokenClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("invalid signing method")
@@ -89,7 +88,7 @@ func (s *AuthService) ParseToken(tokenString string) (int, string, error) {
 	return claims.Id, claims.Class, nil
 }
 
-func (s *AuthService) CreateTasks(n int) ([]int, error) {
+func (a *AuthService) CreateTasks(n int) ([]int, error) {
 	tasks := make([]repo_models.Task, 0)
 	for i := 0; i < n; i++ {
 		nameInt := rand.Int31n(3)
@@ -97,9 +96,9 @@ func (s *AuthService) CreateTasks(n int) ([]int, error) {
 		itemsInt := rand.Int31n(4)
 		item := repo_models.ItemNames[itemsInt]
 		weight := rand.Int31n(80-10) + 10
-		task := repo_models.Task{Name: name, Items: item, Weight: weight}
+		task := repo_models.Task{Name: name, Item: item, Weight: int(weight)}
 		tasks = append(tasks, task)
 	}
 
-	return s.rep.PushTasks(tasks)
+	return a.rep.PushTasks(tasks)
 }

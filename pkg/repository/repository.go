@@ -13,15 +13,26 @@ type Authorization interface {
 }
 
 type Loader interface {
+	GetLoaderFromDB(ID int) (repo_models.Loader, error)
+	GetTasksFromDB(ID int) ([]*repo_models.Task, error)
 }
 
 type Client interface {
+	GetClientFromDB(ID int) (repo_models.Client, error)
+	GetAvailableTasksFromDB() ([]*repo_models.Task, error)
+	GetTaskFromDB(id int) (repo_models.Task, error)
+	GetLoadersFromDB(loadersID []int) ([]*repo_models.Loader, error)
+	UpdateClient(repo_models.Client) error
+	UpdateLoaders(loaders []*repo_models.Loader) error
+	UpdateTasks(taskID int, loaders []int) error
 }
 
 type Repository struct {
 	Authorization
+	Loader
+	Client
 }
 
 func NewRepository(db *sqlx.DB) *Repository {
-	return &Repository{NewAuthPostgres(db)}
+	return &Repository{NewAuthPostgres(db), NewLoader(db), NewClient(db)}
 }

@@ -2,37 +2,63 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
+	"log"
+	"net/http"
 )
 
-func (h *Handler) getClient(c *gin.Context) {
+type StartParams struct {
+	Task    int   `json:"task"`
+	Loaders []int `json:"loaders"`
+}
 
+func (h *Handler) getClient(c *gin.Context) {
+	playerID, ok := c.Get("playerID")
+	if !ok {
+		newErrorResponse(c, http.StatusBadRequest, "ID is empty")
+		return
+	}
+
+	client, err := h.service.GetClient(playerID.(int))
+	if err != nil {
+		newErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, client)
 }
 
 func (h *Handler) getAvailableTasks(c *gin.Context) {
-
+	tasks, err := h.service.GetClientTasks()
+	if err != nil {
+		newErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, tasks)
 }
 
-//В хендлере только валидация
-/*
 func (h *Handler) start(c *gin.Context) {
-	task, err := h.service.ChooseTask
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
+	var params StartParams
+	playerID, ok := c.Get("playerID")
+	if !ok {
+		newErrorResponse(c, http.StatusBadRequest, "ID is empty")
 		return
 	}
-	loaders, err := h.service.GetLoaders
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
-		return
-	}
-	result, err := h.service.CompleteTask(task, loaders)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, err.Error())
-			return
-		}
 
-	c.JSON(http.StatusOK, map[string]interface{}{
-		"Complete": task.Name
-	})
+	if err := c.BindJSON(&params); err != nil {
+		newErrorResponse(c, http.StatusBadRequest, "invalid params")
+		return
+	}
+
+	log.Printf("Game is starting NOW!")
+	result, err := h.service.Start(playerID.(int), params.Task, params.Loaders)
+	if err != nil {
+		newErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if !result {
+		c.JSON(http.StatusOK, "You lost! Buy battlepass for another try")
+	} else {
+		c.JSON(http.StatusOK, "Task completed! Congratulations!")
+	}
 }
-*/

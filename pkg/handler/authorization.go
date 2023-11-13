@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
+	"math/rand"
 	"net/http"
-	"strconv"
 	"strings"
 	"worldOfLoaders/pkg/repository/repo_models"
 )
@@ -29,6 +29,11 @@ func (h *Handler) register(c *gin.Context) {
 		return
 	}
 
+	if err := h.validateInput(player); err != nil {
+		newErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	id, err := h.service.Authorization.CreatePlayer(player)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
@@ -38,7 +43,19 @@ func (h *Handler) register(c *gin.Context) {
 	c.JSON(http.StatusOK, map[string]interface{}{
 		`id`: id,
 	})
+}
 
+func (h *Handler) validateInput(player repo_models.Player) error {
+	if player.Login == "" {
+		return errors.New("login cant be empty")
+	}
+	if player.Password == "" {
+		return errors.New("password cant be empty")
+	}
+	if player.Class == "" {
+		return errors.New("class cant be empty")
+	}
+	return nil
 }
 
 func (h *Handler) login(c *gin.Context) {
@@ -69,7 +86,7 @@ func (h *Handler) getPlayers(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func (h *Handler) userIdentity(c *gin.Context) {
+func (h *Handler) playerIdentity(c *gin.Context) {
 	header := c.GetHeader(authorizationHeader)
 	if header == "" {
 		newErrorResponse(c, http.StatusUnauthorized, "empty auth header")
@@ -94,33 +111,33 @@ func (h *Handler) userIdentity(c *gin.Context) {
 	}
 
 	c.Set("playerID", playerId)
-	c.Set("playerClass", playerClass)
+	c.Set("playerClass", strings.ToLower(playerClass))
+}
+
+func (h *Handler) validateLoader(c *gin.Context) {
+	h.playerIdentity(c)
+	if class, _ := c.Get("playerClass"); class != "loader" {
+		newErrorResponse(c, http.StatusUnauthorized, "your class is [client]")
+		return
+	}
+}
+
+func (h *Handler) validateClient(c *gin.Context) {
+	h.playerIdentity(c)
+	if class, _ := c.Get("playerClass"); class != "client" {
+		newErrorResponse(c, http.StatusUnauthorized, "your class is [loader]")
+		return
+	}
 }
 
 func (h *Handler) createTasks(c *gin.Context) {
-	numString := c.GetHeader("number")
-	num, err := strconv.Atoi(numString)
-	if err != nil {
-		newErrorResponse(c, http.StatusBadRequest, err.Error())
-	}
-	tasksId, err := h.service.CreateTasks(num)
+	num := rand.Int31n(10-1) + 1
+
+	tasksId, err := h.service.CreateTasks(int(num))
 	if err != nil {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
 	log.Println(tasksId)
 	c.JSON(http.StatusOK, "Tasks created")
 
-}
-
-func getUserId(c *gin.Context) (int, error) {
-	id, ok := c.Get("playerID")
-	if !ok {
-		return 0, errors.New("user not found")
-	}
-
-	idInt, ok := id.(int)
-	if !ok {
-		return 0, errors.New("user id is of invalid type")
-	}
-	return idInt, nil
 }

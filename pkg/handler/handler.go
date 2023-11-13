@@ -24,18 +24,19 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		auth.GET("/players", h.getPlayers)
 	}
 
-	loaders := router.Group("/loaders", h.userIdentity)
+	loaders := router.Group("/loaders", h.validateLoader)
 
 	{
 		loaders.GET("/me", h.getLoader)
 		loaders.GET("/tasks", h.getCompletedTasks)
 	}
 
-	clients := router.Group("/clients", h.userIdentity)
+	clients := router.Group("/clients", h.validateClient)
 	{
 		clients.GET("/me", h.getClient)
 		clients.GET("/tasks", h.getAvailableTasks)
-		//clients.POST("/start", h.start)
+		clients.POST("/start", h.start)
 	}
+
 	return router
 }
