@@ -4,27 +4,23 @@ import (
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
+	"worldOfLoaders/pkg/models"
+	"worldOfLoaders/pkg/service"
 )
 
-type StartParams struct {
-	Task    int   `json:"task"`
-	Loaders []int `json:"loaders"`
+type ClientInfo struct {
+	Client  models.Client
+	Loaders []*models.Loader
 }
 
 func (h *Handler) getClient(c *gin.Context) {
-	playerID, ok := c.Get("playerID")
-	if !ok {
-		newErrorResponse(c, http.StatusBadRequest, "ID is empty")
-		return
-	}
-
-	client, err := h.service.GetClient(playerID.(int))
+	client, loaders, err := h.service.GetClientInfo(c.GetInt("playerID"))
 	if err != nil {
 		newErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, client)
+	c.JSON(http.StatusOK, ClientInfo{Client: client, Loaders: loaders})
 }
 
 func (h *Handler) getAvailableTasks(c *gin.Context) {
@@ -37,12 +33,7 @@ func (h *Handler) getAvailableTasks(c *gin.Context) {
 }
 
 func (h *Handler) start(c *gin.Context) {
-	var params StartParams
-	playerID, ok := c.Get("playerID")
-	if !ok {
-		newErrorResponse(c, http.StatusBadRequest, "ID is empty")
-		return
-	}
+	var params service.StartParams
 
 	if err := c.BindJSON(&params); err != nil {
 		newErrorResponse(c, http.StatusBadRequest, "invalid params")
@@ -50,7 +41,7 @@ func (h *Handler) start(c *gin.Context) {
 	}
 
 	log.Printf("Game is starting NOW!")
-	result, err := h.service.Start(playerID.(int), params.Task, params.Loaders)
+	result, err := h.service.Start(c.GetInt("playerID"), params)
 	if err != nil {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return

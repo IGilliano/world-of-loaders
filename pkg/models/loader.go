@@ -1,4 +1,4 @@
-package repo_models
+package models
 
 import "math/rand"
 

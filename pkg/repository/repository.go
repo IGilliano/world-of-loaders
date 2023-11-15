@@ -2,28 +2,32 @@ package repository
 
 import (
 	"github.com/jmoiron/sqlx"
-	"worldOfLoaders/pkg/repository/repo_models"
+	"worldOfLoaders/pkg/models"
 )
 
 type Authorization interface {
-	CreatePlayer(player repo_models.Player) (int, error)
-	GetPlayers() ([]*repo_models.Player, error)
-	GetPlayer(login, password string) (repo_models.Player, error)
-	PushTasks(tasks []repo_models.Task) ([]int, error)
+	CreatePlayer(player models.Player) (int, error)
+	GetPlayer(login, password string) (models.Player, error)
+	GetPlayers() ([]*models.Player, error)
 }
 
 type Loader interface {
-	GetLoaderFromDB(ID int) (repo_models.Loader, error)
-	GetTasksFromDB(ID int) ([]*repo_models.Task, error)
+	GetLoaderFromDB(ID int) (models.Loader, error)
+	GetLoadersFromDB(loadersID []int) ([]*models.Loader, error)
+	GetRegisteredLoaders() ([]*models.Loader, error)
+	UpdateLoaders(loaders []*models.Loader) error
 }
 
 type Client interface {
-	GetClientFromDB(ID int) (repo_models.Client, error)
-	GetAvailableTasksFromDB() ([]*repo_models.Task, error)
-	GetTaskFromDB(id int) (repo_models.Task, error)
-	GetLoadersFromDB(loadersID []int) ([]*repo_models.Loader, error)
-	UpdateClient(repo_models.Client) error
-	UpdateLoaders(loaders []*repo_models.Loader) error
+	GetClientFromDB(ID int) (models.Client, error)
+	UpdateClient(models.Client) error
+}
+
+type Task interface {
+	PushTasks(tasks []models.Task) ([]int, error)
+	GetTaskFromDB(id int) (models.Task, error)
+	GetTasksFromDB(ID int) ([]*models.Task, error)
+	GetAvailableTasksFromDB() ([]*models.Task, error)
 	UpdateTasks(taskID int, loaders []int) error
 }
 
@@ -31,8 +35,9 @@ type Repository struct {
 	Authorization
 	Loader
 	Client
+	Task
 }
 
 func NewRepository(db *sqlx.DB) *Repository {
-	return &Repository{NewAuthPostgres(db), NewLoader(db), NewClient(db)}
+	return &Repository{NewAuthPostgres(db), NewLoader(db), NewClient(db), NewTask(db)}
 }

@@ -2,66 +2,62 @@ package service
 
 import (
 	"log"
+	"worldOfLoaders/pkg/models"
 	"worldOfLoaders/pkg/repository"
-	"worldOfLoaders/pkg/repository/repo_models"
 )
 
+type StartParams struct {
+	Task    int   `json:"task"`
+	Loaders []int `json:"loaders"`
+}
+
 type ClientService struct {
-	rep repository.Client
+	repClient  repository.Client
+	repTask    repository.Task
+	repLoaders repository.Loader
 }
 
-func NewClientService(rep repository.Client) *ClientService {
-	return &ClientService{rep: rep}
+func NewClientService(repC repository.Client, repT repository.Task, repL repository.Loader) *ClientService {
+	return &ClientService{repClient: repC, repTask: repT, repLoaders: repL}
 }
 
-func (c *ClientService) GetClient(ID int) (repo_models.Client, error) {
-	return c.rep.GetClientFromDB(ID)
+func (c *ClientService) GetClientInfo(ID int) (models.Client, []*models.Loader, error) {
+	clients, err := c.repClient.GetClientFromDB(ID)
+	if err != nil {
+		return models.Client{}, []*models.Loader{}, err
+	}
+	loaders, err := c.repLoaders.GetRegisteredLoaders()
+	if err != nil {
+		return models.Client{}, []*models.Loader{}, err
+	}
+	return clients, loaders, nil
 }
 
-func (c *ClientService) GetClientTasks() ([]*repo_models.Task, error) {
-	return c.rep.GetAvailableTasksFromDB()
-}
-
-func (c *ClientService) GetTask(id int) (repo_models.Task, error) {
-	return c.rep.GetTaskFromDB(id)
-}
-
-func (c *ClientService) GetLoaders(loadersID []int) ([]*repo_models.Loader, error) {
-	return c.rep.GetLoadersFromDB(loadersID)
-}
-
-func (c *ClientService) Start(playerID int, taskID int, loadersID []int) (bool, error) {
-	var result bool
+func (c *ClientService) Start(playerID int, params StartParams) (bool, error) {
 	var bill int
 	var totalCapacity float64
-	client, err := c.rep.GetClientFromDB(playerID)
+
+	client, err := c.repClient.GetClientFromDB(playerID)
 	if err != nil {
-		return result, err
+		return false, err
 	}
 	log.Printf("Client is ready")
 
-	task, err := c.rep.GetTaskFromDB(taskID)
+	task, err := c.repTask.GetTaskFromDB(params.Task)
 	if err != nil {
-		return result, err
+		return false, err
 	}
 	log.Printf("Task is ready")
 
-	loaders, err := c.rep.GetLoadersFromDB(loadersID)
+	loaders, err := c.repLoaders.GetLoadersFromDB(params.Loaders)
 	if err != nil {
-		return result, err
+		return false, err
 	}
 	log.Printf("Loaders is ready")
 
 	for _, loader := range loaders {
 		var lCap float64
-		/*
-				if loader.IsDrinking {
-				lCap = float64((loader.Capacity) * ((100 - loader.Fatigue) / 100) * (loader.Fatigue / 100))
-			} else {
-				lCap = float64((loader.Capacity) * ((100 - loader.Fatigue) / 100))
-			}
-		*/
-		lCap = float64((loader.Capacity) * ((100 - loader.Fatigue) / 100))
+		lCap = float64(loader.Capacity) * float64(100-loader.Fatigue) / 100
 		log.Printf("Here is loader number %d with capacity:%f", loader.ID, lCap)
 		bill += loader.Salary
 		totalCapacity += lCap
@@ -69,40 +65,32 @@ func (c *ClientService) Start(playerID int, taskID int, loadersID []int) (bool, 
 		if loader.IsDrinking {
 			loader.Fatigue += 10
 		}
+		if loader.Fatigue > 100 {
+			loader.Fatigue = 100
+		}
 	}
 
 	log.Printf("Now, now. Player have %d dollars, bill:%d dollars", client.Fund, bill)
-	if client.Fund < bill {
+	log.Printf("Capacity of loaders: %f. They need to lift %d", totalCapacity, task.Weight)
+	if client.Fund < bill || totalCapacity < float64(task.Weight) {
 		client.Fund = 0
 		client.InGame = false
-		if err = c.rep.UpdateClient(client); err != nil {
-			return result, err
+		if err = c.repClient.UpdateClient(client); err != nil {
+			return false, err
 		}
-		return result, nil
-	}
-
-	log.Printf("Capacity of loaders: %f, but they need to take %d", totalCapacity, task.Weight)
-	if totalCapacity < float64(task.Weight) {
-		client.Fund = 0
-		client.InGame = false
-		if err = c.rep.UpdateClient(client); err != nil {
-			return result, err
-		}
-		return result, nil
+		return false, nil
 	}
 
 	client.Fund -= bill
 
-	if err = c.rep.UpdateClient(client); err != nil {
-		return result, err
+	if err = c.repClient.UpdateClient(client); err != nil {
+		return false, err
 	}
-	if err = c.rep.UpdateLoaders(loaders); err != nil {
-		return result, err
+	if err = c.repLoaders.UpdateLoaders(loaders); err != nil {
+		return false, err
 	}
-
-	if err = c.rep.UpdateTasks(task.ID, loadersID); err != nil {
-		return result, err
+	if err = c.repTask.UpdateTasks(task.ID, params.Loaders); err != nil {
+		return false, err
 	}
-
 	return true, nil
 }

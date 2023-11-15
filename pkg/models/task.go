@@ -1,4 +1,4 @@
-package repo_models
+package models
 
 var TaskNames = []string{"Unload the car", "Apartment moving", "Furniture assembly", "Cargo delivery"}
 var ItemNames = []string{"Books", "Furniture", "Boxes", "Clothes", "Grocery"}

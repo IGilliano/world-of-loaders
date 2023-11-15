@@ -8,11 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strings"
-	"worldOfLoaders/pkg/repository/repo_models"
-)
-
-const (
-	authorizationHeader = "Authorization"
+	"worldOfLoaders/pkg/models"
 )
 
 type Login struct {
@@ -22,7 +18,7 @@ type Login struct {
 }
 
 func (h *Handler) register(c *gin.Context) {
-	var player repo_models.Player
+	var player models.Player
 
 	if err := c.BindJSON(&player); err != nil {
 		newErrorResponse(c, http.StatusBadRequest, "invalid input body")
@@ -45,7 +41,7 @@ func (h *Handler) register(c *gin.Context) {
 	})
 }
 
-func (h *Handler) validateInput(player repo_models.Player) error {
+func (h *Handler) validateInput(player models.Player) error {
 	if player.Login == "" {
 		return errors.New("login cant be empty")
 	}
@@ -87,7 +83,7 @@ func (h *Handler) getPlayers(c *gin.Context) {
 }
 
 func (h *Handler) playerIdentity(c *gin.Context) {
-	header := c.GetHeader(authorizationHeader)
+	header := c.GetHeader("Authorization")
 	if header == "" {
 		newErrorResponse(c, http.StatusUnauthorized, "empty auth header")
 		return

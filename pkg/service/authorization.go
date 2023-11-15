@@ -5,10 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
-	"math/rand"
 	"time"
+	"worldOfLoaders/pkg/models"
 	"worldOfLoaders/pkg/repository"
-	"worldOfLoaders/pkg/repository/repo_models"
 )
 
 const (
@@ -31,7 +30,7 @@ func NewAuthService(rep repository.Authorization) *AuthService {
 	return &AuthService{rep: rep}
 }
 
-func (a *AuthService) CreatePlayer(player repo_models.Player) (int, error) {
+func (a *AuthService) CreatePlayer(player models.Player) (int, error) {
 	player.Password = generatePasswordHash(player.Password)
 	return a.rep.CreatePlayer(player)
 }
@@ -43,7 +42,7 @@ func generatePasswordHash(password string) string {
 	return fmt.Sprintf("%x", hash.Sum([]byte(salt)))
 }
 
-func (a *AuthService) GetPlayers() ([]*repo_models.Player, error) {
+func (a *AuthService) GetPlayers() ([]*models.Player, error) {
 	return a.rep.GetPlayers()
 }
 
@@ -86,19 +85,4 @@ func (a *AuthService) ParseToken(tokenString string) (int, string, error) {
 	}
 
 	return claims.Id, claims.Class, nil
-}
-
-func (a *AuthService) CreateTasks(n int) ([]int, error) {
-	tasks := make([]repo_models.Task, 0)
-	for i := 0; i < n; i++ {
-		nameInt := rand.Int31n(3)
-		name := repo_models.TaskNames[nameInt]
-		itemsInt := rand.Int31n(4)
-		item := repo_models.ItemNames[itemsInt]
-		weight := rand.Int31n(80-10) + 10
-		task := repo_models.Task{Name: name, Item: item, Weight: int(weight)}
-		tasks = append(tasks, task)
-	}
-
-	return a.rep.PushTasks(tasks)
 }

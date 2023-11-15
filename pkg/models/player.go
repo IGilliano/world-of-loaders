@@ -1,4 +1,4 @@
-package repo_models
+package models
 
 type Player struct {
 	ID       int    `json:"id" db:"id"`

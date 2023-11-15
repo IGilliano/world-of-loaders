@@ -6,13 +6,7 @@ import (
 )
 
 func (h *Handler) getLoader(c *gin.Context) {
-	playerID, ok := c.Get("playerID")
-	if !ok {
-		newErrorResponse(c, http.StatusBadRequest, "ID is empty")
-		return
-	}
-
-	loader, err := h.service.GetLoader(playerID.(int))
+	loader, err := h.service.GetLoader(c.GetInt("playerID"))
 	if err != nil {
 		newErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
@@ -22,13 +16,7 @@ func (h *Handler) getLoader(c *gin.Context) {
 }
 
 func (h *Handler) getCompletedTasks(c *gin.Context) {
-	playerID, ok := c.Get("playerID")
-	if !ok {
-		newErrorResponse(c, http.StatusBadRequest, "ID is empty")
-		return
-	}
-
-	tasks, err := h.service.GetLoaderTasks(playerID.(int))
+	tasks, err := h.service.GetLoaderTasks(c.GetInt("playerID"))
 	if err != nil {
 		newErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
